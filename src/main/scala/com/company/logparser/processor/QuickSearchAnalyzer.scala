@@ -14,8 +14,9 @@ object QuickSearchAnalyzer {
     implicit val tuple2Encoder: org.apache.spark.sql.Encoder[(String, String)] =
       Encoders.tuple(Encoders.STRING, Encoders.STRING)
 
-    implicit val tuple3Encoder: org.apache.spark.sql.Encoder[(String, String, java.time.LocalDate)] =
-      Encoders.tuple(Encoders.STRING, Encoders.STRING, Encoders.javaSerialization[java.time.LocalDate])
+    // Изменение кодировщика на String для поля date
+    implicit val tuple3Encoder: org.apache.spark.sql.Encoder[(String, String, String)] =
+      Encoders.tuple(Encoders.STRING, Encoders.STRING, Encoders.STRING)
 
     // Получаем QS события с их документами
     val quickSearchDocs = events.flatMap {
@@ -25,9 +26,11 @@ object QuickSearchAnalyzer {
       .toDF("sessionId", "docId")
       .distinct()
 
-    // Получаем открытия документов
+    // Получаем открытия документов и преобразуем LocalDate в String
     val docOpens = events.flatMap {
-        case doEvent: DocumentOpen => Seq((doEvent.sessionId, doEvent.documentId, doEvent.dateTime.toLocalDate))
+        case doEvent: DocumentOpen =>
+          val dateStr = doEvent.dateTime.toLocalDate.toString // Форматирование даты как строки
+          Seq((doEvent.sessionId, doEvent.documentId, dateStr))
         case _ => Seq.empty
       }(tuple3Encoder) // Явно указываем Encoder для трехэлементного кортежа
       .toDF("sessionId", "docId", "date")

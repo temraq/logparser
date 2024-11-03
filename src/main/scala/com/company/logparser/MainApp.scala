@@ -13,9 +13,9 @@ object MainApp {
       .master("local[*]")
       .getOrCreate()
 
-    // ВАЖНО: import spark.implicits._ должен быть после создания SparkSession
-
-    val dataPath = "path_to_logs"
+    val dataPath = {
+      "input"
+    }
 
     // Читаем и парсим логи
     val events = readAndParseLogs(dataPath)
@@ -23,7 +23,7 @@ object MainApp {
     // Задание 1: Количество поисков документа ACC_45616 через карточку поиска
     val documentIdToSearch = "ACC_45616"
     val cardSearchCount = CardSearchAnalyzer.countSpecificDocumentSearch(events, documentIdToSearch)
-    println(s"Количество поисков документа $documentIdToSearch через карточку поиска: $cardSearchCount")
+
 
     // Задание 2: Количество открытий каждого документа, найденного через быстрый поиск, за каждый день
     val docOpenCounts = QuickSearchAnalyzer.countDocumentOpensPerDay(events)
@@ -32,22 +32,39 @@ object MainApp {
     // Сохранение результатов
     docOpenCounts.write
       .option("header", "true")
+      .mode("overwrite") // Добавлен режим перезаписи
       .csv("output/doc_open_counts")
+
+    println(s"Количество поисков документа $documentIdToSearch через карточку поиска: $cardSearchCount")
 
     spark.stop()
   }
 
-  def readAndParseLogs(dataPath: String)(implicit spark: SparkSession): Dataset[Event] = {
+  private def readAndParseLogs(dataPath: String)(implicit spark: SparkSession): Dataset[Event] = {
     import spark.implicits._
 
     val files = Files.list(Paths.get(dataPath)).toArray.map(_.toString)
 
     val eventsSeq = files.flatMap { file =>
-      val lines = scala.io.Source.fromFile(file).getLines().toSeq
-      LogParserService.parseLines(lines)
+      // Укажите правильную кодировку, например, "Windows-1251" или "UTF-8"
+      val encoding = "Windows-1251" // Замените на фактическую кодировку ваших файлов
+      val source = scala.io.Source.fromFile(file)(encoding)
+      try {
+        val lines = source.getLines().toSeq
+        LogParserService.parseLines(lines)
+      } catch {
+        case e: java.nio.charset.MalformedInputException =>
+          println(s"Ошибка декодирования файла $file: ${e.getMessage}")
+          Seq.empty[Event]
+        case e: Exception =>
+          println(s"Неизвестная ошибка при обработке файла $file: ${e.getMessage}")
+          Seq.empty[Event]
+      } finally {
+        source.close()
+      }
     }.toSeq
 
-    // Создаем Dataset из последовательности (Seq) напрямую
+    // Создаём Dataset из последовательности (Seq) напрямую
     eventsSeq.toDS()
   }
 }
