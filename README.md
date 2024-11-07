@@ -140,7 +140,8 @@ output/doc_open_counts/
 
 Если у вас возникнут вопросы или проблемы при сборке и запуске проекта, пожалуйста, свяжитесь со мной:
 
-- **Email**: ваш_email@example.com
+- **Email**: temp.raquets@gmail.com
+- **Telegram**: @rawrayguns
 
 ---
 
