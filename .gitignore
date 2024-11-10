@@ -21,6 +21,20 @@ target/
 .springBeans
 .sts4-cache
 
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+
+# Файлы ОС
+.DS_Store
+Thumbs.db
+
+### Input files
+/input/
+/output/
+
+
 ### NetBeans ###
 /nbproject/private/
 /nbbuild/
