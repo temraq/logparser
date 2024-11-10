@@ -10,35 +10,27 @@ object QuickSearchAnalyzer {
                               )(implicit spark: SparkSession): DataFrame = {
 
 
-    // Явное указание типов для Encoder
-    implicit val tuple2Encoder: org.apache.spark.sql.Encoder[(String, String)] =
-      Encoders.tuple(Encoders.STRING, Encoders.STRING)
+    implicit val tuple2Encoder = Encoders.tuple(Encoders.STRING, Encoders.STRING)
+    implicit val tuple3Encoder = Encoders.tuple(Encoders.STRING, Encoders.STRING, Encoders.STRING)
 
-    // Изменение кодировщика на String для поля date
-    implicit val tuple3Encoder: org.apache.spark.sql.Encoder[(String, String, String)] =
-      Encoders.tuple(Encoders.STRING, Encoders.STRING, Encoders.STRING)
-
-    // Получаем QS события с их документами
     val quickSearchDocs = events.flatMap {
-        case qs: QuickSearch => qs.documentIds.map(docId => (qs.sessionId, docId))
+        case qs: QuickSearch => qs.documentIds.map(docId => (qs.searchId, docId))
         case _ => Seq.empty
-      }(tuple2Encoder) // Указываем какой именно Encoder использовать явно, чтобы избежать конфликта
-      .toDF("sessionId", "docId")
+      }(tuple2Encoder)
+      .toDF("searchId", "docId")
       .distinct()
 
-    // Получаем открытия документов и преобразуем LocalDate в String
     val docOpens = events.flatMap {
         case doEvent: DocumentOpen =>
-          val dateStr = doEvent.dateTime.toLocalDate.toString // Форматирование даты как строки
-          Seq((doEvent.sessionId, doEvent.documentId, dateStr))
+          val date = doEvent.dateTime.toLocalDate
+          val dateStr = f"${date.getDayOfMonth}%02d.${date.getMonthValue}%02d.${date.getYear}%04d"
+          Seq((doEvent.searchId, doEvent.documentId, dateStr))
         case _ => Seq.empty
-      }(tuple3Encoder) // Явно указываем Encoder для трехэлементного кортежа
-      .toDF("sessionId", "docId", "date")
+      }(tuple3Encoder)
+      .toDF("searchId", "docId", "date")
 
-    // Соединяем открытия с QS документами
-    val joinedData = docOpens.join(quickSearchDocs, Seq("sessionId", "docId"))
+    val joinedData = docOpens.join(quickSearchDocs, Seq("searchId", "docId"))
 
-    // Считаем количество открытий документов за день
     val result = joinedData.groupBy("date", "docId").count()
 
     result

@@ -9,10 +9,19 @@ object CardSearchAnalyzer {
                                    events: Dataset[Event],
                                    documentId: String
                                  )(implicit spark: SparkSession): Long = {
+    
+    println(s"Всего событий: ${events.count()}")
 
-    events.filter {
-      case cs: CardSearchStart => cs.documentIds.contains(documentId)
+    val matchingEvents = events.filter {
+      case cs: CardSearch =>
+        val containsDoc = cs.documentIds.contains(documentId)
+        println(s"CardSearch событие с searchId = ${cs.searchId}, содержит документ $documentId: $containsDoc")
+        containsDoc
       case _ => false
-    }.count()
+    }
+
+    val count = matchingEvents.count()
+    println(s"Найдено событий CardSearch с документом $documentId: $count")
+    count
   }
 }

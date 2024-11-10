@@ -4,7 +4,9 @@ import com.company.logparser.model.Event
 import com.company.logparser.parser.LogParserService
 import com.company.logparser.processor.{CardSearchAnalyzer, QuickSearchAnalyzer}
 import org.apache.spark.sql.{Dataset, SparkSession}
+
 import java.nio.file.{Files, Paths}
+
 
 object MainApp {
   def main(args: Array[String]): Unit = {
@@ -13,31 +15,25 @@ object MainApp {
       .master("local[*]")
       .getOrCreate()
 
-    val dataPath = {
-      "input"
-    }
+    val dataPath = "input"
 
-    // Читаем и парсим логи
     val events = readAndParseLogs(dataPath)
 
     // Задание 1: Количество поисков документа ACC_45616 через карточку поиска
     val documentIdToSearch = "ACC_45616"
     val cardSearchCount = CardSearchAnalyzer.countSpecificDocumentSearch(events, documentIdToSearch)
 
-
     // Задание 2: Количество открытий каждого документа, найденного через быстрый поиск, за каждый день
     val docOpenCounts = QuickSearchAnalyzer.countDocumentOpensPerDay(events)
     docOpenCounts.show(truncate = false)
 
-    // Сохранение результатов
     docOpenCounts.write
       .option("header", "true")
-      .mode("overwrite") // Добавлен режим перезаписи
+      .mode("overwrite")
       .csv("output/doc_open_counts")
 
-    println(s"Количество поисков документа $documentIdToSearch через карточку поиска: $cardSearchCount")
-
     spark.stop()
+    println(s"Количество поисков документа $documentIdToSearch через карточку поиска: $cardSearchCount")
   }
 
   private def readAndParseLogs(dataPath: String)(implicit spark: SparkSession): Dataset[Event] = {
@@ -46,8 +42,8 @@ object MainApp {
     val files = Files.list(Paths.get(dataPath)).toArray.map(_.toString)
 
     val eventsSeq = files.flatMap { file =>
-      // Укажите правильную кодировку, например, "Windows-1251" или "UTF-8"
-      val encoding = "Windows-1251" // Замените на фактическую кодировку ваших файлов
+
+      val encoding = "Windows-1251"
       val source = scala.io.Source.fromFile(file)(encoding)
       try {
         val lines = source.getLines().toSeq
@@ -64,7 +60,6 @@ object MainApp {
       }
     }.toSeq
 
-    // Создаём Dataset из последовательности (Seq) напрямую
     eventsSeq.toDS()
   }
 }

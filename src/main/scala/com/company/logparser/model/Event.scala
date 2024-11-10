@@ -14,24 +14,23 @@ case class SessionEnd(dateTime: LocalDateTime) extends Event
 case class QuickSearch(
                         dateTime: LocalDateTime,
                         query: String,
-                        sessionId: String,
+                        searchId: String,
                         documentIds: Seq[String]
                       ) extends Event
 
-case class CardSearchStart(
-                            dateTime: LocalDateTime,
-                            sessionId: String,
-                            parameters: Map[String, String],
-                            documentIds: Seq[String]
-                          ) extends Event
+case class CardSearch(
+                       dateTime: LocalDateTime,
+                       searchId: String,
+                       parameters: Map[String, String],
+                       documentIds: Seq[String]
+                     ) extends Event
 
 case class DocumentOpen(
                          dateTime: LocalDateTime,
-                         sessionId: String,
+                         searchId: String,
                          documentId: String
                        ) extends Event
 
 object Event {
-  // Явно определить неявный Encoder для Event используя Kryo-сериализацию
   implicit val eventEncoder: Encoder[Event] = Encoders.kryo[Event]
 }
